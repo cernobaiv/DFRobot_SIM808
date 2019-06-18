@@ -326,6 +326,16 @@ public:
 	//Open or Close GPS
 	bool  attachGPS();
 	bool  detachGPS();
+
+    //Power ON/OFF GNSS
+    bool  powerOnGNSS();
+    bool  powerOffGNSS();
+
+    bool getCGNSINF();
+
+    bool initHttpService();
+    bool httpGET(const char* url, char* responseBody);
+    bool stopHttpService();
 	
      // Parse a (potentially negative) number with up to 2 decimal digits -xxxx.yy
 	 
@@ -368,6 +378,19 @@ public:
         int minutes;
         float seconeds;
     }latDMS,longDMS;
+
+    struct GNSSData {
+        char utcTime[19];
+        char lat[11];
+        char lon[12];
+        char altitude[9];
+        char speed[7];
+        char course[7];
+        char gnssSatellites[3];
+    } GNSSData;
+
+protected:
+    void copyWithDefault(const char* src, char* dst, const char* defaultVal = "0");
 
 private:
 	byte serialFlag;

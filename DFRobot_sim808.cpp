@@ -38,6 +38,9 @@ DFRobot_SIM808* DFRobot_SIM808::inst;
 char receivedStackIndex = 0;
 char receivedStack[130];
 const char *des = "$GPRMC";
+const char *desCGNSINF = "+CGNSINF: ";
+const char *desHTTPACTION = "+HTTPACTION: ";
+const char *desHTTPREAD = "+HTTPREAD: ";
 
 //char *receivedStack="$GPRMC,165445.000,A,3110.8635,N,12133.4627,E,0.58,70.26,220916,,,A*57";
 
@@ -461,7 +464,7 @@ bool DFRobot_SIM808::isCallActive(char *number)
              }
              //I need to read more buffer
              //We are going to flush serial data until OK is recieved
-             return sim808_wait_for_resp("OK\r\n", CMD); 
+             return sim808_wait_for_resp("OK\r\n", CMD);
            }
          }
       }        
@@ -856,9 +859,9 @@ bool DFRobot_SIM808::getLocation(const __FlashStringHelper *apn, float *longitud
     char *s;
     
 	//send AT+SAPBR=3,1,"Contype","DFRobot_SIM808"
-	sim808_check_with_cmd("AT+SAPBR=3,1,\"Contype\",\"DFRobot_SIM808\"\r","OK\r\n",CMD);
+    sim808_check_with_cmd("AT+SAPBR=3,1,\"Contype\",\"GPRS\"\r","OK\r\n",CMD);
 	//sen AT+SAPBR=3,1,"APN","DFRobot_SIM808_APN"
-	sim808_send_cmd("AT+SAPBR=3,1,\"APN\",\"");
+    sim808_send_cmd("AT+SAPBR=3,1,\"APN\",\"net\"");
 	if (apn) {
       sim808_send_cmd(apn);
     }
@@ -910,7 +913,200 @@ bool DFRobot_SIM808::detachGPS()
 	 if(!sim808_check_with_cmd("AT+CGNSPWR=0\r\n", "OK\r\n", CMD)) { 
         return false;
     }
-	return true;
+     return true;
+}
+
+bool DFRobot_SIM808::powerOnGNSS()
+{
+    return sim808_check_with_cmd("AT+CGNSPWR=1\r\n", "OK\r\n", CMD);
+}
+
+bool DFRobot_SIM808::powerOffGNSS()
+{
+    return sim808_check_with_cmd("AT+CGNSPWR=0\r\n", "OK\r\n", CMD);
+}
+
+bool DFRobot_SIM808::getCGNSINF()
+{
+    sim808_send_cmd("AT+CGNSINF\r\n");
+
+    char buf[156];
+    recv(buf, sizeof(buf));
+
+    // Echo command.
+    char* tok = strtok(buf, "\r\n");
+
+    // Actual data.
+    char* data = strtok(NULL, "\r\n");
+
+    if (data)
+    {
+        // Empty line
+        tok = strtok(NULL, "\n");
+
+        char* res = strtok(NULL, "\n");
+
+        if (res && strstr(res, "OK"))
+        {
+            Serial.println(data);
+
+            if (strstr(data, desCGNSINF))
+            {
+                // Check that the GPS run status and Fix status are both 1.
+                if (data[10] == '1' && data[12] == '1')
+                {
+                    // UTC date & Time
+                    tok = strtok(data + 14, ",");
+                    copyWithDefault(tok, GNSSData.utcTime, "");
+
+                    // Latitude
+                    tok = strtok(NULL, ",");
+                    copyWithDefault(tok, GNSSData.lat);
+
+                    // Longitude
+                    tok = strtok(NULL, ",");
+                    copyWithDefault(tok, GNSSData.lon);
+
+                    // Altitude (meters)
+                    tok = strtok(NULL, ",");
+                    copyWithDefault(tok, GNSSData.altitude);
+
+                    // Speed over ground (Km/h)
+                    tok = strtok(NULL, ",");
+                    copyWithDefault(tok, GNSSData.speed);
+
+                    // Course (degrees)
+                    tok = strtok(NULL, ",");
+                    copyWithDefault(tok, GNSSData.course);
+
+
+                    // Skip 7 variables.
+                    tok = strtok(NULL, ",");
+                    tok = strtok(NULL, ",");
+                    tok = strtok(NULL, ",");
+                    tok = strtok(NULL, ",");
+                    tok = strtok(NULL, ",");
+                    tok = strtok(NULL, ",");
+                    tok = strtok(NULL, ",");
+
+                    // gnssSatellites
+                    tok = strtok(NULL, ",");
+                    copyWithDefault(tok, GNSSData.gnssSatellites);
+
+                    return true;
+
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+bool DFRobot_SIM808::initHttpService()
+{
+    if(!sim808_check_with_cmd("AT+CGATT?\r\n", "OK\r\n",CMD))
+        return false;
+
+    if(!sim808_check_with_cmd("AT+SAPBR=3,1,\"CONTYPE\",\"GPRS\"\r\n", "OK\r\n",CMD))
+        return false;
+
+    if(!sim808_check_with_cmd("AT+SAPBR=3,1,\"APN\",\"net\"\r\n","OK\r\n",CMD))
+        return false;
+
+    if(!sim808_check_with_cmd("AT+SAPBR=1,1\r\n", "OK\r\n",CMD))
+        return false;
+
+    if(!sim808_check_with_cmd("AT+HTTPINIT\r\n", "OK\r\n",CMD))
+        return false;
+
+    return true;
+}
+
+bool DFRobot_SIM808::httpGET(const char *url, char *responseBody)
+{
+    //String atRequest = String("AT+HTTPPARA=\"URL\",\"") + url + "\"";
+    const char* atRequest = "AT+HTTPPARA=\"URL\",\"api.ipify.org\"\r\n";
+
+    Serial.print("Requesting: ");
+    Serial.println(atRequest);
+
+    if(!sim808_check_with_cmd(atRequest, "OK\r\n",CMD))
+        return false;
+
+    Serial.println("Action request started...");
+
+    char buf[128];
+
+    if(!sim808_check_with_cmd("AT+HTTPACTION=0\r\n", "OK\r\n",CMD))
+        return false;
+
+    sim808_read_buffer(buf, sizeof(buf));
+
+    Serial.print("Action response: ");
+    Serial.println(buf);
+
+    // Action response.
+    char* data = strtok(buf, "\r\n");
+
+    Serial.print("Action data: ");
+    Serial.println(data);
+
+    if (strstr(data, desHTTPACTION))
+    {
+        char* tok = strtok(data + 13, ",");
+        char* resultCode = strtok(NULL, ",");
+
+        Serial.print("Resulting code: ");
+        Serial.print(resultCode);
+
+        if (resultCode && strstr(resultCode, "200"))
+        {
+            sim808_send_cmd("AT+HTTPREAD\r\n");
+            sim808_clean_buffer(buf, sizeof(buf));
+            sim808_read_buffer(buf, sizeof(buf));
+
+            Serial.print("HTTP read data: ");
+            Serial.println(buf);
+
+            // Empty line.
+            tok = strtok(buf, "\r\n");
+
+            // Num bytes read.
+            tok = strtok(NULL, "\r\n");
+
+            // Data
+            data = strtok(NULL, "\r\n");
+
+            Serial.print("HTTP parsed data: ");
+            Serial.println(data);
+
+            char* res = strtok(NULL, "\r\n");
+
+            Serial.print("HTTP read result: ");
+            Serial.println(res);
+
+            if (res && strstr(res, "OK"))
+            {
+                copyWithDefault(data, responseBody, "");
+                return true;
+            }
+        }
+    }
+
+
+    return false;
+}
+
+bool DFRobot_SIM808::stopHttpService()
+{
+    if(!sim808_check_with_cmd("AT+HTTPTERM\r\n", "OK\r\n",CMD))
+        return false;
+
+    if(!sim808_check_with_cmd("AT+SAPBR=0,1\r\n", "OK\r\n",CMD))
+        return false;
+
+    return true;
 }
 
 bool DFRobot_SIM808::getGPRMC()
@@ -1095,7 +1291,24 @@ bool DFRobot_SIM808::getGPS()
    // if (altitude == NULL){
    //   return true;
 	//}
-	return true;
+    return true;
+}
+
+void DFRobot_SIM808::copyWithDefault(const char *src, char *dst, const char *defaultVal)
+{
+    size_t szCopied = strlen(src);
+    if (src == NULL || szCopied == 0)
+    {
+        szCopied = strlen(defaultVal);
+        strncpy(dst, defaultVal, szCopied);
+
+    }
+    else
+    {
+        strncpy(dst, src, szCopied);
+    }
+
+    dst[szCopied] = '\0';
 }
 
 void DFRobot_SIM808::latitudeConverToDMS()
@@ -1115,4 +1328,3 @@ void DFRobot_SIM808::LongitudeConverToDMS()
     longDMS.minutes = (int)temp;
     longDMS.seconeds = (temp - longDMS.minutes)*60;
 }
-
