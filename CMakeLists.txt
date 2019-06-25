@@ -48,12 +48,26 @@ include_directories(${GTEST_INCLUDE_DIRS} ${Qt5Core_INCLUDE_DIRS} "Tests" "mocks
 
 set(tested_HEADERS_LIST
     "${APP_ROOT}/sim808.h"
-    "${APP_ROOT}/DFRobot_sim808.h"
+    "${APP_ROOT}/SIM808_Init.h"
+    "${APP_ROOT}/Impl/SIM808_HTTP.h"
+    "${APP_ROOT}/Impl/SIM808_GPS.h"
+    "${APP_ROOT}/Impl/SIM808_GPRS.h"
+    "${APP_ROOT}/Impl/SIM808_SMS.h"
+    "${APP_ROOT}/Impl/SIM808_TCP_Client.h"
+    "${APP_ROOT}/Impl/SIM808_TCP_Server.h"
+    "${APP_ROOT}/Impl/SIM808_UDP_Client.h"
     )
 
 set(tested_SOURCES_LIST
     "${APP_ROOT}/sim808.cpp"
-    "${APP_ROOT}/DFRobot_sim808.cpp"
+    "${APP_ROOT}/SIM808_Init.cpp"
+    "${APP_ROOT}/Impl/SIM808_HTTP.cpp"
+    "${APP_ROOT}/Impl/SIM808_GPS.cpp"
+    "${APP_ROOT}/Impl/SIM808_GPRS.cpp"
+    "${APP_ROOT}/Impl/SIM808_SMS.cpp"
+    "${APP_ROOT}/Impl/SIM808_TCP_Client.cpp"
+    "${APP_ROOT}/Impl/SIM808_TCP_Server.cpp"
+    "${APP_ROOT}/Impl/SIM808_UDP_Client.cpp"
     )
     
 set(bin_dir ${CMAKE_CURRENT_SOURCE_DIR}/bin)

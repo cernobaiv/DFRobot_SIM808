@@ -60,4 +60,8 @@ boolean  sim808_wait_for_resp(const char* resp, DataType type, unsigned int time
 boolean  sim808_check_with_cmd(const char* cmd, const char *resp, DataType type, unsigned int timeout = DEFAULT_TIMEOUT, unsigned int chartimeout = DEFAULT_INTERCHAR_TIMEOUT*5);
 boolean  sim808_check_with_cmd(const __FlashStringHelper* cmd, const char *resp, DataType type, unsigned int timeout = DEFAULT_TIMEOUT, unsigned int chartimeout = DEFAULT_INTERCHAR_TIMEOUT);
 
+void copyWithDefault(const char* src, char* dst, const char* defaultVal = "0");
+
+int sim808_recv(char* buf, int len);
+
 #endif

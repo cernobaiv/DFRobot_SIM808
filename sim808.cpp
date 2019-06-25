@@ -196,3 +196,27 @@ boolean sim808_check_with_cmd(const __FlashStringHelper* cmd, const char *resp, 
     sim808_send_cmd(cmd);
     return sim808_wait_for_resp(resp,type,timeout,chartimeout);
 }
+
+void copyWithDefault(const char *src, char *dst, const char *defaultVal)
+{
+    size_t szCopied = strlen(src);
+    if (src == NULL || szCopied == 0)
+    {
+        szCopied = strlen(defaultVal);
+        strncpy(dst, defaultVal, szCopied);
+
+    }
+    else
+    {
+        strncpy(dst, src, szCopied);
+    }
+
+    dst[szCopied] = '\0';
+}
+
+int sim808_recv(char *buf, int len)
+{
+    sim808_clean_buffer(buf,len);
+    sim808_read_buffer(buf, len);
+    return strlen(buf);
+}
