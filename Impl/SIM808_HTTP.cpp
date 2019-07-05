@@ -1,33 +1,3 @@
-/*!
- * @file DFRobot_sim808.cpp
- * @A library  for DFRobot's SIM808 GPS/DFRobot_SIM808/GSM Shield
- *
- * @copyright	[DFRobot](http://www.dfrobot.com), 2016
- *
- * @author [Jason](jason.ling@dfrobot.com)
- * @version  V1.0
- * @date  2016-09-23
- 
- * The MIT License (MIT)
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
- 
 #include "sim808.h"
 #include "SIM808_HTTP.h"
 
@@ -35,77 +5,126 @@ const char *desHTTPACTION = "+HTTPACTION: ";
 const char *desHTTPREAD = "+HTTPREAD: ";
 
 
-bool DFRobot_SIM808_HTTP::initHttpService()
+bool DFRobot_SIM808_HTTP::initHttpService(const char* apn)
 {
-    if(!sim808_check_with_cmd("AT+CGATT?\r\n", "OK\r\n",CMD))
+    if(!sim808_check_with_cmd("AT+CGATT?\r\n", "OK\r\n", CMD))
         return false;
 
-    if(!sim808_check_with_cmd("AT+SAPBR=3,1,\"CONTYPE\",\"GPRS\"\r\n", "OK\r\n",CMD))
+    if(!sim808_check_with_cmd("AT+SAPBR=3,1,\"CONTYPE\",\"GPRS\"\r\n", "OK\r\n", CMD))
         return false;
 
-    if(!sim808_check_with_cmd("AT+SAPBR=3,1,\"APN\",\"net\"\r\n","OK\r\n",CMD))
+    sim808_send_cmd("AT+SAPBR=3,1,\"APN\",\"");
+    sim808_send_cmd(apn);
+
+    if(!sim808_check_with_cmd("\"\r\n", "OK\r\n", CMD))
         return false;
 
-    if(!sim808_check_with_cmd("AT+SAPBR=1,1\r\n", "OK\r\n",CMD))
+    if(!sim808_check_with_cmd("AT+SAPBR=1,1\r\n", "OK\r\n", CMD))
         return false;
 
-    if(!sim808_check_with_cmd("AT+HTTPINIT\r\n", "OK\r\n",CMD))
+    if(!sim808_check_with_cmd("AT+HTTPINIT\r\n", "OK\r\n", CMD))
         return false;
 
     return true;
 }
 
-bool DFRobot_SIM808_HTTP::httpGET(const char *url, char *responseBody)
+bool DFRobot_SIM808_HTTP::addParameter(const char *name, const char *val)
 {
-    String atRequest = String("AT+HTTPPARA=\"URL\",\"") + url + "\"\r\n";
-    //const char* atRequest = "AT+HTTPPARA=\"URL\",\"api.ipify.org\"\r\n";
+    sim808_send_cmd("AT+HTTPPARA=\"");
+    sim808_send_cmd(name);
+    sim808_send_cmd("\",\"");
+    sim808_send_cmd(val);
 
-    Serial.print("Requesting: ");
-    Serial.println(atRequest);
+    return sim808_check_with_cmd("\"\r\n", "OK\r\n", CMD);
+}
 
-    if(!sim808_check_with_cmd(atRequest.c_str(), "OK\r\n",CMD))
+bool DFRobot_SIM808_HTTP::addData(const char *data)
+{
+    sim808_send_cmd("AT+HTTPDATA=");
+
+    char dataSize[6];
+    itoa(strlen(data), dataSize, 10);
+
+    sim808_send_cmd(dataSize);
+
+    if (!sim808_check_with_cmd(",30000\r\n", "DOWNLOAD\r\n", CMD))
         return false;
 
-    char buf[128];
+    return sim808_check_with_cmd(data, "OK\r\n", CMD);
+}
 
-    if(!sim808_check_with_cmd("AT+HTTPACTION=0\r\n", "OK\r\n",CMD))
-        return false;
+int DFRobot_SIM808_HTTP::sendRequest(const HttpAction& action)
+{
+    sim808_flush_serial();
+    sim808_send_cmd("AT+HTTPACTION=");
 
+    char httpAction[2];
+    httpAction[0] = static_cast<char>(action);
+    httpAction[1] = 0;
+
+    sim808_send_cmd(httpAction);
+    sim808_send_cmd("\r\n");
+
+    char buf[64];
+    sim808_clean_buffer(buf, sizeof(buf));
     sim808_read_buffer(buf, sizeof(buf));
 
-    // Action response.
-    char* data = strtok(buf, "\r\n");
+    // Echo response.
+    char* echo = strtok(buf, "\r\n");
+
+    // Result
+    char* result = strtok(nullptr, "\r\n");
+
+    if (strstr(result, "ERROR"))
+        return -1;
+
+    // Empty line
+    char* data = strtok(nullptr, "\r\n");
 
     if (strstr(data, desHTTPACTION))
     {
-        char* tok = strtok(data + 13, ",");
-        char* resultCode = strtok(NULL, ",");
+        char* resultCode = strtok(data + 15, ",");
 
-        if (resultCode && strstr(resultCode, "200"))
-        {
-            sim808_send_cmd("AT+HTTPREAD\r\n");
-            sim808_clean_buffer(buf, sizeof(buf));
-            sim808_read_buffer(buf, sizeof(buf));
-
-            // Empty line.
-            tok = strtok(buf, "\r\n");
-
-            // Num bytes read.
-            tok = strtok(NULL, "\r\n");
-
-            // Data
-            data = strtok(NULL, "\r\n");
-
-            char* res = strtok(NULL, "\r\n");
-
-            if (res && strstr(res, "OK"))
-            {
-                copyWithDefault(data, responseBody, "");
-                return true;
-            }
-        }
+        if (resultCode)
+            return atoi(resultCode);
     }
 
+    return -1;
+}
+
+bool DFRobot_SIM808_HTTP::readData(char* response)
+{
+    sim808_send_cmd("AT+HTTPREAD\r\n");
+
+    char buf[256];
+    sim808_clean_buffer(buf, sizeof(buf));
+    sim808_read_buffer(buf, sizeof(buf));
+
+    // Echo line.
+    char* firstLine = strtok(buf, "\r\n");
+
+    // Meta-data.
+    char* metaData = strtok(nullptr, "\r\n");
+
+    if (strstr(metaData, desHTTPREAD))
+    {
+        // Num bytes read.
+        const auto nrBytesRead = atoi(metaData + 11);
+
+        Serial.print("Num bytes read: ");
+        Serial.println(nrBytesRead);
+
+        if (nrBytesRead >= 0)
+        {
+            // Data
+            char* data = strtok(NULL, "\r\nOK");
+
+            strncpy(response, data, nrBytesRead);
+            response[nrBytesRead] = 0;
+
+            return true;
+        }
+    }
 
     return false;
 }
