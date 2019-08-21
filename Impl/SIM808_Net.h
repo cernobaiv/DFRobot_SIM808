@@ -7,7 +7,7 @@ class DFRobot_SIM808_Net
 public:
     virtual ~DFRobot_SIM808_Net() {}
 
-    bool join(const char* apn = 0, const char* userName = 0, const char* passWord = 0);
+    bool join(const char* apn);
 
     /** Disconnect the DFRobot_SIM808 module from the network
      *  @returns

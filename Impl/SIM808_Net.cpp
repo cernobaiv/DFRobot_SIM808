@@ -57,6 +57,15 @@ void DFRobot_SIM808_Net::disconnect()
     sim808_send_cmd("AT+CIPSHUT\r\n");
 }
 
+bool DFRobot_SIM808_Net::is_connected()
+{
+    char resp[96];
+    sim808_send_cmd("AT+CIPSTATUS\r\n");
+    sim808_read_buffer(resp,sizeof(resp), DEFAULT_TIMEOUT);
+
+    return (strstr(resp,"CONNECTED") != nullptr);
+}
+
 bool DFRobot_SIM808_Net::close()
 {
     // if not connected, return
