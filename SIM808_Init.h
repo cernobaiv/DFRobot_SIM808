@@ -54,7 +54,7 @@ public:
     SIM808_Init();
     
 
-    void serialBegin();
+    bool serialBegin();
 
     bool powerUpDown();
 

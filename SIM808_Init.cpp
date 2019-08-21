@@ -7,10 +7,22 @@ SIM808_Init::SIM808_Init()
     sim808_init(&m_mySerial, 0);
 }
 
-void SIM808_Init::serialBegin()
+bool SIM808_Init::serialBegin()
 {
     m_mySerial.begin(SIM808_BAUD_RATE);
     //Serial.begin(9600);
+
+    if(!sim808_check_with_cmd("AT\r\n","OK\r\n",CMD))
+        return false;
+
+    sim808_send_cmd("AT+IPR=");
+
+    char baudRate[8];
+    itoa(SIM808_BAUD_RATE, baudRate, 10);
+
+    sim808_send_cmd(baudRate);
+
+    return sim808_check_with_cmd("\"\r\n", "OK\r\n", CMD);
 }
 
 bool SIM808_Init::init()
