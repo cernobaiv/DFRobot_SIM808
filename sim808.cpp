@@ -64,7 +64,7 @@ int sim808_wait_readable (int wait_time)
     int dataLen = 0;
     timerStart = millis();
     while((unsigned long) (millis() - timerStart) > wait_time * 1000UL) {
-        delay(500);
+        delay(1);
         dataLen = sim808_check_readable();
         if(dataLen > 0){
             break;

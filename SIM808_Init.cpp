@@ -10,7 +10,7 @@ SIM808_Init::SIM808_Init()
 void SIM808_Init::serialBegin()
 {
     m_mySerial.begin(SIM808_BAUD_RATE);
-    Serial.begin(9600);
+    //Serial.begin(9600);
 }
 
 bool SIM808_Init::init()
@@ -38,7 +38,7 @@ void SIM808_Init::initInALoop()
     //******** Initialize sim808 module *************
    while(!init()) {
        delay(1000);
-       Serial.print("Sim808 init error\r\n");
+       //Serial.print("Sim808 init error\r\n");
    }
 }
 

@@ -38,9 +38,9 @@
  *  used to realize DFRobot_SIM808 communication
  */ 
 
-#define PWR_PIN             8
-#define SIM808_RX_to_TX     9
-#define SIM808_TX_to_RX     10
+#define PWR_PIN             2
+#define SIM808_RX_to_TX     7
+#define SIM808_TX_to_RX     8
 
 #define SIM808_BAUD_RATE    9600
 
