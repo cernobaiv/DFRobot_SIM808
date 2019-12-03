@@ -54,7 +54,7 @@ public:
     SIM808_Init();
     
 
-    bool serialBegin();
+    void serialBegin();
 
     bool powerUpDown();
 
@@ -62,7 +62,9 @@ public:
 
     SoftwareSerial& serial();
 
-    void initInALoop();
+    void initInALoop();    
+
+    void serialListen();
 
 private:
     bool checkSIMStatus(void);

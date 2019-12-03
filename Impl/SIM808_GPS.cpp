@@ -15,10 +15,8 @@ bool DFRobot_SIM808_GPS::powerOffGNSS()
 
 bool DFRobot_SIM808_GPS::getCGNSINF()
 {
-    sim808_send_cmd("AT+CGNSINF\r\n");
-
     char buf[156];
-    sim808_recv(buf, sizeof(buf));
+    getCGNSINF(buf, sizeof(buf));
 
     // Echo command.
     char* tok = strtok(buf, "\r\n");
@@ -88,4 +86,10 @@ bool DFRobot_SIM808_GPS::getCGNSINF()
     }
 
     return false;
+}
+
+int DFRobot_SIM808_GPS::getCGNSINF(char *rawData, size_t sz)
+{
+    sim808_send_cmd("AT+CGNSINF\r\n");
+    return sim808_recv(rawData, sz);
 }

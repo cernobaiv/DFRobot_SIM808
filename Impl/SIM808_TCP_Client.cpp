@@ -21,4 +21,3 @@ bool DFRobot_SIM808_TCP_Client::connect(const char* host, int port, int timeout,
     }
     return false;
 }
-

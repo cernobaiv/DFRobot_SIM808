@@ -166,7 +166,7 @@ boolean sim808_wait_for_resp(const char* resp, DataType type, unsigned int timeo
         if(sim808_check_readable()) {
             char c = serialSIM808->read();
             prevChar = millis();
-            sum = (c==resp[sum]) ? sum+1 : 0;
+            sum = (c==resp[sum]) ? sum + 1 : 0;
             if(sum == len)break;
         }
         if ((unsigned long) (millis() - timerStart) > timeout * 1000UL) {
